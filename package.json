@@ -1,7 +1,8 @@
 {
-  "name": "@jstpierre/noclip.website",
+  "name": "@noclip/website",
   "private": true,
   "license": "MIT",
+  "type": "module",
   "devDependencies": {
     "@rsbuild/core": "^1.4.4",
     "@rsbuild/plugin-type-check": "^1.2.3",
@@ -29,6 +30,9 @@
     "reflect-metadata": "^0.2.2",
     "tiff": "^6.2.0"
   },
+  "exports": {
+    "./*": "./src/*"
+  },
   "scripts": {
     "start": "pnpm run build:rust && rsbuild dev",
     "build": "pnpm run build:rust && rsbuild build",
@@ -46,6 +50,7 @@
     "build:Fez": "cd src/Fez/tools && tsx extractor.ts",
     "test:DeBlob2": "cd src/DeBlob2/tools && tsx systest.ts",
     "typecheck": "tsc -w --noEmit",
+    "typecheck:all": "tsc --noEmit && pnpm --filter @noclip/map-viewer typecheck",
     "watch:rust": "pnpm run build:rust-dev && onchange rust/src/**/*.rs rust/noclip-macros/src/**/*.rs -- pnpm run build:rust-dev"
   },
   "bin": {

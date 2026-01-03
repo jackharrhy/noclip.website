@@ -1,0 +1,48 @@
+{
+  "name": "@noclip/map-viewer",
+  "version": "0.1.0",
+  "description": "Web component for rendering game maps in the browser",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@noclip/website": "workspace:*",
+    "gl-matrix": "^3.4.3",
+    "lit": "^3.2.1"
+  },
+  "devDependencies": {
+    "@webgpu/types": "^0.1.64",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {},
+  "keywords": [
+    "quake",
+    "half-life",
+    "bsp",
+    "web-component",
+    "3d",
+    "webgl",
+    "webgpu"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/magcius/noclip.website"
+  }
+}
+
