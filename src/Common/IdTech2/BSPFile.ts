@@ -1,11 +1,11 @@
 
-import { ReadonlyVec4, vec4 } from "gl-matrix";
+import { vec4 } from "gl-matrix";
 import ArrayBufferSlice from "../../ArrayBufferSlice.js";
 import { AABB } from "../../Geometry.js";
 import { convertToTrianglesRange, getTriangleIndexCountForTopologyIndexCount, GfxTopology } from "../../gfx/helpers/TopologyHelpers.js";
 import { LightmapPackerPage } from "../../SourceEngine/BSPFile.js";
-import { pairs2obj, ValveKeyValueParser, VKFPair } from "../../SourceEngine/VMT.js";
 import { assert, decodeString, ensureInList, readString } from "../../util.js";
+import { BSPEntity, parseEntitiesLump, readVec4, SurfaceLightmapData, Surface, TexinfoMapping } from "./IdTech2Common.js";
 
 enum LumpType {
     ENTITIES = 0,
@@ -25,28 +25,10 @@ enum LumpType {
     MODELS = 14,
 };
 
-interface TexinfoMapping {
-    s: ReadonlyVec4;
-    t: ReadonlyVec4;
-}
-
 interface Texinfo {
     textureMapping: TexinfoMapping;
     miptex: number;
     flags: number;
-}
-
-export interface SurfaceLightmapData {
-    faceIndex: number;
-    // Size of a single lightmap.
-    width: number;
-    height: number;
-    styles: number[];
-    samples: Uint8Array | null;
-    // Dynamic allocation
-    pageIndex: number;
-    pagePosX: number;
-    pagePosY: number;
 }
 
 export interface Model {
@@ -55,27 +37,8 @@ export interface Model {
     surfaces: number[];
 }
 
-export interface Surface {
-    texName: string;
-    startIndex: number;
-    indexCount: number;
-    lightmapData: SurfaceLightmapData[];
-}
-
-export interface BSPEntity {
-    classname: string;
-    [k: string]: string;
-}
-
-function parseEntitiesLump(str: string): BSPEntity[] {
-    const p = new ValveKeyValueParser(str);
-    const entities: BSPEntity[] = [];
-    while (p.hastok()) {
-        entities.push(pairs2obj(p.unit() as VKFPair[]) as BSPEntity);
-        p.skipwhite();
-    }
-    return entities;
-}
+// Re-export shared types for external consumers
+export type { BSPEntity, SurfaceLightmapData, Surface } from "./IdTech2Common.js";
 
 export class BSPFile {
     public version: number;
@@ -105,14 +68,6 @@ export class BSPFile {
         // Parse out entities.
         this.entitiesStr = decodeString(getLumpData(LumpType.ENTITIES));
         this.entities = parseEntitiesLump(this.entitiesStr);
-
-        function readVec4(view: DataView, offs: number): vec4 {
-            const x = view.getFloat32(offs + 0x00, true);
-            const y = view.getFloat32(offs + 0x04, true);
-            const z = view.getFloat32(offs + 0x08, true);
-            const w = view.getFloat32(offs + 0x0C, true);
-            return vec4.fromValues(x, y, z, w);
-        }
 
         const texinfoa: Texinfo[] = [];
 

@@ -6,10 +6,10 @@ import { convertToCanvas } from "../../gfx/helpers/TextureConversionHelpers.js";
 import { SceneGfx, Texture, ViewerRenderInput } from "../../viewer.js";
 import { DeviceProgram } from "../../Program.js";
 import { BSPEntity, BSPFile, Model, Surface, SurfaceLightmapData } from "./BSPFile.js";
-import { GfxRenderInstList, GfxRenderInstManager } from "../../gfx/render/GfxRenderInstManager.js";
+import { GfxRenderInstManager } from "../../gfx/render/GfxRenderInstManager.js";
 import { TextureMapping } from "../../TextureHolder.js";
 import { mat4, ReadonlyMat4 } from "gl-matrix";
-import { Camera, CameraController } from "../../Camera.js";
+import { CameraController } from "../../Camera.js";
 import { fillMatrix4x4, fillVec4 } from "../../gfx/helpers/UniformBufferHelpers.js";
 import { WAD, WAD2LumpType, WAD3LumpType } from "./WAD.js";
 import { GfxRenderHelper } from "../../gfx/render/GfxRenderHelper.js";
@@ -20,6 +20,7 @@ import { GfxShaderLibrary } from "../../gfx/helpers/GfxShaderLibrary.js";
 import { createBufferFromData } from "../../gfx/helpers/BufferHelpers.js";
 import { TextureListHolder } from "../../ui.js";
 import { WorldLightingState } from "./WorldLightingState.js";
+import { isToolTexture, IdTech2View } from "./IdTech2Common.js";
 
 function getMipTexName(buffer: ArrayBufferSlice): string {
     return readString(buffer, 0x00, 0x10, true);
@@ -259,20 +260,6 @@ void main() {
 `;
 }
 
-function isToolTexture(texName: string): boolean {
-    const lower = texName.toLowerCase();
-    if (lower === 'trigger') return true;
-    if (lower === 'clip') return true;
-    if (lower === 'skip') return true;
-    if (lower === 'hint') return true;
-    if (lower === 'origin') return true;
-    if (lower === 'aaatrigger') return true;
-    if (lower === 'null') return true;
-    if (lower === 'nodraw') return true;
-    if (lower === 'invisible') return true;
-    if (lower.startsWith('tools/')) return true;
-    return false;
-}
 
 class BSPSurfaceRenderer {
     private textureMapping = nArray(2, () => new TextureMapping());
@@ -310,7 +297,7 @@ class BSPSurfaceRenderer {
         this.gfxProgram = cache.createProgram(program);
     }
 
-    public prepareToRender(renderInstManager: GfxRenderInstManager, lightmapManager: LightmapManager, view: View, modelMatrix: ReadonlyMat4): void {
+    public prepareToRender(renderInstManager: GfxRenderInstManager, lightmapManager: LightmapManager, view: IdTech2View, modelMatrix: ReadonlyMat4): void {
         if (!this.visible || this.gfxProgram === null)
             return;
 
@@ -346,7 +333,7 @@ class BSPModelRenderer {
         }
     }
 
-    public prepareToRender(renderInstManager: GfxRenderInstManager, view: View): void {
+    public prepareToRender(renderInstManager: GfxRenderInstManager, view: IdTech2View): void {
         if (!this.visible)
             return;
 
@@ -355,46 +342,6 @@ class BSPModelRenderer {
     }
 }
 
-// In Source, the convention is +X for forward and -X for backward, +Y for left and -Y for right, and +Z for up and -Z for down.
-// Converts from Source conventions to noclip ones.
-const noclipSpaceFromSourceEngineSpace = mat4.fromValues(
-    0,  0, -1, 0,
-    -1, 0,  0, 0,
-    0,  1,  0, 0,
-    0,  0,  0, 1,
-);
-
-// A "View" is effectively camera settings, but in Source engine space.
-class View {
-    // aka viewMatrix
-    public viewFromWorldMatrix = mat4.create();
-    // aka worldMatrix
-    public worldFromViewMatrix = mat4.create();
-    public clipFromWorldMatrix = mat4.create();
-    // aka projectionMatrix
-    public clipFromViewMatrix = mat4.create();
-
-    public time = 0;
-
-    public mainList = new GfxRenderInstList();
-    public skyList = new GfxRenderInstList();
-
-    public finishSetup(): void {
-        mat4.invert(this.worldFromViewMatrix, this.viewFromWorldMatrix);
-        mat4.mul(this.clipFromWorldMatrix, this.clipFromViewMatrix, this.viewFromWorldMatrix);
-    }
-
-    public setupFromCamera(camera: Camera): void {
-        mat4.mul(this.viewFromWorldMatrix, camera.viewMatrix, noclipSpaceFromSourceEngineSpace);
-        mat4.copy(this.clipFromViewMatrix, camera.projectionMatrix);
-        this.finishSetup();
-    }
-
-    public reset(): void {
-        this.mainList.reset();
-        this.skyList.reset();
-    }
-}
 
 class LightmapManager {
     public gfxTexture: GfxTexture;
@@ -537,7 +484,7 @@ export class BSPRenderer {
         }
     }
 
-    public prepareToRender(renderInstManager: GfxRenderInstManager, view: View, worldLightingState: WorldLightingState): void {
+    public prepareToRender(renderInstManager: GfxRenderInstManager, view: IdTech2View, worldLightingState: WorldLightingState): void {
         this.lightmapManager.prepareToRender(renderInstManager.gfxRenderCache.device, worldLightingState);
 
         const template = renderInstManager.pushTemplate();
@@ -570,7 +517,7 @@ export class IdTech2Renderer implements SceneGfx {
     public renderHelper: GfxRenderHelper;
     public worldLightingState: WorldLightingState;
 
-    public mainView = new View();
+    public mainView = new IdTech2View();
 
     constructor(device: GfxDevice) {
         this.renderHelper = new GfxRenderHelper(device);
